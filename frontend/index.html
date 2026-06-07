@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>API Gateway Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; max-width: 900px; }
+    label { display: block; margin-top: 16px; }
+    input, select, textarea, button { font-size: 1rem; margin-top: 4px; width: 100%; }
+    textarea { min-height: 120px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 220px; }
+    #output { white-space: pre-wrap; background: #f7f7f7; padding: 16px; border: 1px solid #ddd; margin-top: 16px; }
+    .small { width: auto; }
+  </style>
+</head>
+<body>
+  <h1>API Gateway Demo</h1>
+  <p>This page calls the API Gateway at <strong>http://localhost:8000</strong> and displays responses. Use the token generator first, then send requests.</p>
+
+  <div class="row">
+    <div>
+      <label>Role</label>
+      <select id="role">
+        <option value="user">user</option>
+        <option value="admin">admin</option>
+      </select>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button id="genToken">Generate Token</button>
+    </div>
+  </div>
+
+  <div>
+    <label>Access Token</label>
+    <textarea id="token" readonly></textarea>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Service</label>
+      <select id="service">
+        <option value="user-service">user-service</option>
+        <option value="product-service">product-service</option>
+        <option value="order-service">order-service</option>
+      </select>
+    </div>
+    <div>
+      <label>HTTP Method</label>
+      <select id="method">
+        <option value="GET">GET</option>
+        <option value="POST">POST</option>
+      </select>
+    </div>
+  </div>
+
+  <label>Path</label>
+  <input id="path" value="" placeholder="users, products, orders" />
+
+  <label>Request Body (JSON for POST)</label>
+  <textarea id="body" placeholder='{"name":"test"}'></textarea>
+
+  <div class="row">
+    <button id="send">Send Request</button>
+    <button id="sendRepeat">Send 12 Requests</button>
+  </div>
+
+  <div id="output"></div>
+
+  <script>
+    const gatewayBase = 'http://localhost:8000';
+    const output = document.getElementById('output');
+    const tokenField = document.getElementById('token');
+    const serviceSelect = document.getElementById('service');
+    const pathInput = document.getElementById('path');
+    const defaultPaths = {
+      'user-service': 'users',
+      'product-service': 'products',
+      'order-service': 'orders'
+    };
+
+    function setDefaultPath() {
+      const service = serviceSelect.value;
+      if (!pathInput.value.trim()) {
+        pathInput.value = defaultPaths[service] || '';
+      }
+    }
+
+    serviceSelect.addEventListener('change', setDefaultPath);
+    setDefaultPath();
+
+    document.getElementById('genToken').addEventListener('click', async () => {
+      const role = document.getElementById('role').value;
+      output.textContent = 'Generating token...';
+      try {
+        const res = await fetch(`${gatewayBase}/generate-token?role=${role}`, { method: 'POST' });
+        const data = await res.json();
+        tokenField.value = data.access_token;
+        output.textContent = `Token generated for role=${role}. Use it for gateway requests below.`;
+      } catch (err) {
+        output.textContent = 'Token generation failed: ' + err;
+      }
+    });
+
+    document.getElementById('send').addEventListener('click', () => sendRequest(false));
+    document.getElementById('sendRepeat').addEventListener('click', () => sendRequest(true));
+
+    async function sendRequest(repeat) {
+      const service = document.getElementById('service').value;
+      const method = document.getElementById('method').value;
+      let path = document.getElementById('path').value.trim();
+      const bodyText = document.getElementById('body').value.trim();
+      const token = tokenField.value.trim();
+      if (!path) {
+        path = defaultPaths[service] || '';
+      }
+      const url = `${gatewayBase}/${service}/${path}`;
+
+      if (!token) {
+        output.textContent = 'Please generate a token first.';
+        return;
+      }
+
+      output.textContent = 'Sending request(s)...';
+      const requests = repeat ? 12 : 1;
+      let results = [];
+
+      output.textContent = `Sending request to: ${url}`;
+      for (let i = 1; i <= requests; i++) {
+        try {
+          const response = await fetch(url, {
+            method,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: method === 'POST' ? bodyText || '{}' : undefined,
+          });
+          const text = await response.text();
+          results.push(`Request ${i}: ${response.status}\nURL: ${response.url}\n${text}`);
+        } catch (err) {
+          results.push(`Request ${i}: network error: ${err}`);
+        }
+      }
+
+      output.textContent = results.join('\n\n');
+    }
+  </script>
+</body>
+</html>

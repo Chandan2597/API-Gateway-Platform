@@ -1,0 +1,40 @@
+
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REGISTRY_PATH=/app/registry/registry.json
+    volumes:
+      - ./registry:/app/registry
+    depends_on:
+      - redis
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - gateway
+
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "8001:8001"
+
+  product-service:
+    build: ./services/product-service
+    ports:
+      - "8002:8002"
+
+  order-service:
+    build: ./services/order-service
+    ports:
+      - "8003:8003"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
