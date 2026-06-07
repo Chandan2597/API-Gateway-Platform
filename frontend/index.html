@@ -80,6 +80,13 @@
       'order-service': 'orders'
     };
 
+    const bodyField = document.getElementById('body');
+    const bodyPlaceholders = {
+      'user-service': '{"name":"Alice"}',
+      'product-service': '{"name":"Laptop"}',
+      'order-service': '{"status":"Pending"}'
+    };
+
     function setDefaultPath() {
       const service = serviceSelect.value;
       if (!pathInput.value.trim()) {
@@ -87,8 +94,23 @@
       }
     }
 
-    serviceSelect.addEventListener('change', setDefaultPath);
+    function setBodyPlaceholder() {
+      const service = serviceSelect.value;
+      const method = document.getElementById('method').value;
+      if (method === 'POST') {
+        bodyField.placeholder = bodyPlaceholders[service] || '{"key":"value"}';
+      } else {
+        bodyField.placeholder = 'GET requests do not require a body.';
+      }
+    }
+
+    serviceSelect.addEventListener('change', () => {
+      setDefaultPath();
+      setBodyPlaceholder();
+    });
+    document.getElementById('method').addEventListener('change', setBodyPlaceholder);
     setDefaultPath();
+    setBodyPlaceholder();
 
     document.getElementById('genToken').addEventListener('click', async () => {
       const role = document.getElementById('role').value;
